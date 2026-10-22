@@ -4,8 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>ATLAS — Arena</title>
-  <link rel="stylesheet" href="css/atlas.css">
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js"></script>
+  <meta name="description" content="ATLAS game arena. Chain words, beat the timer, climb the scoreboard.">
+  <meta name="theme-color" content="#090A0D">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/atlas.css?v=2">
+  <script src="js/vendor/confetti.browser.js?v=2"></script>
 </head>
 <body>
   <div class="app-container">
@@ -122,10 +126,20 @@
     </div>
   </div>
 
-  <script src="js/sound-engine.js"></script>
-  <script src="js/game-engine.js"></script>
+  <script src="js/sound-engine.js?v=2"></script>
+  <script src="js/game-engine.js?v=2"></script>
   <script>
-    const storedConfig = JSON.parse(localStorage.getItem("atlas_room_config") || '{"category":"PLACES","turnDurationSeconds":15,"code":"AT7KQ","hostNick":"Player"}');
+    // Safe config loading: corrupt or blocked localStorage must never blank the page.
+    const DEFAULT_CONFIG = { category: "PLACES", turnDurationSeconds: 15, maxPasses: 3, code: "AT7KQ", hostNick: "Player" };
+    const storedConfig = (function () {
+      try {
+        const parsed = JSON.parse(localStorage.getItem("atlas_room_config") || "null");
+        return Object.assign({}, DEFAULT_CONFIG, parsed && typeof parsed === "object" ? parsed : {});
+      } catch (e) {
+        return Object.assign({}, DEFAULT_CONFIG);
+      }
+    })();
+
     document.getElementById("roomPill").innerText = storedConfig.code;
     document.getElementById("catText").innerText = storedConfig.category;
 
@@ -136,6 +150,28 @@
     ];
 
     const game = new AtlasGameEngine(storedConfig.code, storedConfig, initialPlayers);
+    let latestState = null;
+
+    // Clipboard helper with fallback for non-secure contexts / older browsers.
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+      return new Promise(function (resolve, reject) {
+        const area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "");
+        area.style.position = "fixed";
+        area.style.top = "-1000px";
+        document.body.appendChild(area);
+        area.select();
+        try {
+          document.execCommand("copy") ? resolve() : reject(new Error("copy failed"));
+        } catch (err) {
+          reject(err);
+        } finally {
+          document.body.removeChild(area);
+        }
+      });
+    }
 
     // Timer Ticker
     setInterval(() => {
@@ -166,6 +202,7 @@
 
     // Subscribe to state updates
     game.subscribe(state => {
+      latestState = state;
       document.getElementById("roundDisplay").innerText = String(state.roundNumber).padStart(2, "0");
       document.getElementById("letterBox").innerText = state.requiredLetter;
       document.getElementById("answerInput").placeholder = `Enter ${state.config.category.toLowerCase()} starting with "${state.requiredLetter}"...`;
@@ -196,6 +233,8 @@
       const listEl = document.getElementById("scoreboardList");
       listEl.innerHTML = "";
       const sorted = [...state.players].sort((a, b) => b.score - a.score);
+      document.getElementById("survivorsCount").innerText =
+        `${state.players.filter(p => !p.eliminated).length} Active`;
       sorted.forEach(p => {
         const row = document.createElement("div");
         const isActive = p.id === state.activePlayer.id;
@@ -232,9 +271,7 @@
       if (state.status === "GAME_OVER") {
         gameOverModal.classList.add("active");
         SoundEngine.playFanfare();
-        if (typeof confetti !== "undefined") {
-          confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-        }
+        celebrate();
         document.getElementById("winnerText").innerText = `${state.winner.name} Wins!`;
         const rankList = document.getElementById("finalRankList");
         rankList.innerHTML = sorted.map((p, idx) => `
@@ -289,6 +326,50 @@
     document.getElementById("voteInvalidBtn").onclick = () => {
       SoundEngine.playClick();
       game.resolveDispute(false);
+    };
+
+    // Confetti is decoration only — never let it break the victory screen
+    // (e.g. canvas unavailable, blocked, or the script failed to load).
+    function celebrate() {
+      if (typeof confetti !== "function") return;
+      try {
+        const probe = document.createElement("canvas");
+        if (!probe.getContext || !probe.getContext("2d")) return;
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      } catch (e) {}
+    }
+
+    // Share / copy final result
+    function scoreSummary() {
+      if (!latestState) return `ATLAS — room ${storedConfig.code}`;
+      const ranked = [...latestState.players].sort((a, b) => b.score - a.score);
+      const lines = ranked.map((p, i) => `${i + 1}. ${p.name} — ${p.score} pts`);
+      const winner = latestState.winner ? `Winner: ${latestState.winner.name}\n` : "";
+      return `ATLAS • Room ${storedConfig.code}\n${winner}${lines.join("\n")}`;
+    }
+
+    document.getElementById("copyScoreBtn").onclick = () => {
+      SoundEngine.playClick();
+      const btn = document.getElementById("copyScoreBtn");
+      copyText(scoreSummary())
+        .then(() => { btn.innerText = "Copied!"; })
+        .catch(() => { btn.innerText = "Copy failed"; })
+        .finally(() => setTimeout(() => (btn.innerText = "Copy Score"), 2000));
+    };
+
+    document.getElementById("shareScoreBtn").onclick = () => {
+      SoundEngine.playClick();
+      const text = scoreSummary();
+      const url = window.location.origin + window.location.pathname.replace("game.html", "index.html");
+      if (navigator.share) {
+        navigator.share({ title: "ATLAS Game", text: text, url: url }).catch(() => {});
+      } else {
+        const btn = document.getElementById("shareScoreBtn");
+        copyText(`${text}\n${url}`)
+          .then(() => { btn.innerText = "Copied!"; })
+          .catch(() => { btn.innerText = "Share failed"; })
+          .finally(() => setTimeout(() => (btn.innerText = "Share Result"), 2000));
+      }
     };
 
     // Rematch
