@@ -1,15 +1,19 @@
 {
-  "name": "ATLAS — Multiplayer Word-Chain",
-  "short_name": "ATLAS",
-  "description": "Premium real-time multiplayer social word-chain game.",
   "id": "./",
-  "start_url": "./index.html",
+  "name": "ATLAS — Word Chain Card Game",
+  "short_name": "ATLAS",
+  "description": "A word-chain card game. Name a place, a film, an animal — every answer becomes an iconic card that swipes away as the chain continues.",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#090A0D",
-  "theme_color": "#090A0D",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
   "orientation": "portrait",
-  "categories": ["games", "entertainment"],
+  "background_color": "#0A0908",
+  "theme_color": "#0A0908",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["games", "entertainment", "education"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "assets/icon-192.png",
@@ -22,6 +26,48 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "assets/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "assets/img/hero-dunes.jpg",
+      "sizes": "800x1434",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Pick a world"
+    },
+    {
+      "src": "assets/img/card-coast.jpg",
+      "sizes": "800x1434",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Every answer becomes a card"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Play solo",
+      "short_name": "Solo",
+      "url": "./index.html?play=solo",
+      "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Ranking",
+      "short_name": "Ranking",
+      "url": "./index.html?screen=ranking",
+      "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

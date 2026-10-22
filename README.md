@@ -1,100 +1,149 @@
-# ATLAS — Multiplayer Word-Chain Game
+# ATLAS — word-chain card game
 
-A zero-build, dependency-free static web game. Everything runs in the browser; there is no
-server, no bundler and no install step. The repository root **is** the deployable site.
+A word-chain game built as an installable mobile app. Name a place, a film, an animal — the answer
+becomes a card with its icon, the card swipes away, and the chain continues from its last letter.
 
-**Live site:** <https://omprakash-prog03.github.io/Atlas-game/>
-
----
-
-## Repository layout
-
-```
-index.html              Home screen, create/join room modals
-lobby.html              Matchmaking lounge (reads config from localStorage)
-game.html               Game arena + scoreboard + voting modal
-404.html                Custom not-found page (self-contained, deep-path safe)
-manifest.json           PWA manifest (installable app metadata)
-.nojekyll               Tells GitHub Pages to serve files as-is (no Jekyll build)
-css/atlas.css           All styles (design tokens, buttons, modals, cards)
-js/game-engine.js       Authoritative game engine + word datasets
-js/sound-engine.js      Procedural Web Audio sound effects
-js/vendor/              Third-party script (canvas-confetti, ISC) served locally
-                        so the game needs no CDN at runtime
-assets/                 Favicon and PWA icons
-scripts/check-site.mjs  Validates every local asset reference (runs in CI)
-scripts/serve.mjs       Local server that mirrors GitHub Pages hosting
-.github/workflows/      CI: static site check on every push / pull request
-```
-
-> **Rule of thumb:** HTML references assets exactly where they live —
-> `css/atlas.css`, `js/sound-engine.js`, `js/game-engine.js`. If you move a file,
-> move its reference too and run `node scripts/check-site.mjs`.
+- **Live:** <https://omprakash-prog03.github.io/Atlas-game/>
+- **No build step, no accounts, no server to run.** The repository root is the deployable site.
 
 ---
 
-## Deploying to GitHub Pages
+## What it does
 
-This repository is already configured to deploy from the **branch root**:
+| | |
+| --- | --- |
+| **Card deck** | Each answer fills the waiting card with its icon and photo, then swipes off the table. The next empty card is already underneath. |
+| **Six worlds** | Places · Cities · Countries · Movies · Animals · Food — ~700 curated entries in total. |
+| **Live validation** | Every keystroke is checked against the deck: right letter, real entry, not already played. Invalid answers never advance the turn. |
+| **No repeats** | Every card used in a match is burned for that match. |
+| **Scoring** | 10 points per card, up to +5 for speed, bonuses for streaks and for long names. |
+| **Ranking** | Per-world best scores, match history, wins, points and a level that grows with your total. Stored on the device. |
+| **Rounds** | A round ends when every surviving player has played once. Three strikes eliminate a player; last one standing wins. |
+| **Multiplayer** | Real peer-to-peer rooms: host a room, share a 5-letter code, play across phones. |
+| **Offline / installable** | Service worker, app manifest, maskable icons, safe-area layout, wake-lock during matches. |
 
-1. Push to the `main` branch.
-2. GitHub → **Settings** → **Pages**
-   - **Source:** `Deploy from a branch`
-   - **Branch:** `main`
-   - **Folder:** `/ (root)`
-   - **Save**
-3. Wait ~1 minute. The site is published at
-   `https://<owner>.github.io/<repo>/` (here: `/Atlas-game/`).
+### How the rules are enforced
 
-`build_type` for this repository is the standard *legacy* branch build, so **no workflow
-configuration is required** to publish. The `Site check` workflow is validation only; it
-never deploys and never needs Pages permissions.
+`js/engine.js` is a pure, serializable state machine — no DOM, no timers, no hidden randomness:
 
-### Why paths must stay relative
-
-GitHub Pages project sites are served from a **subpath**, not a domain root:
-
-| Reference in HTML | Resolves on Pages | Result |
-| --- | --- | --- |
-| `css/atlas.css` | `https://<owner>.github.io/<repo>/css/atlas.css` | ✅ correct |
-| `/css/atlas.css` | `https://<owner>.github.io/css/atlas.css` | ❌ 404 — repo name is dropped |
-
-Never use a leading `/` for local files. `scripts/check-site.mjs` fails the build if one
-appears, and also fails when a referenced file does not exist.
-
-### Cache busting after a deploy
-
-Browsers and GitHub's CDN cache CSS/JS for up to ~10 minutes. Asset links therefore carry a
-version query string:
-
-```html
-<link rel="stylesheet" href="css/atlas.css?v=2">
-<script src="js/sound-engine.js?v=2"></script>
-<script src="js/game-engine.js?v=2"></script>
+```text
+lobby ──start──▶ playing ──submit/pass/timeout──▶ next turn
+                    │                               │
+                    │        everyone played?       │
+                    ├────────── round + 1 ◀─────────┘
+                    │
+                    └── one survivor / round cap ──▶ match_end
 ```
 
-When you change the CSS or JS, bump `?v=2` to `?v=3` (in all three pages) so returning
-players pick up the new files immediately.
+Every action returns `{ ok, error, reason, state }`, and the same functions run on the host, on a
+guest (for instant local validation) and in the unit tests.
 
 ---
 
-## Verify before you push
+## Multiplayer, honestly
+
+GitHub Pages is static, so there is no game server. ATLAS connects phones **peer-to-peer** with
+[PeerJS](https://peerjs.com/): the host's device owns the authoritative match, guests send intents
+and receive snapshots. Only a lightweight signalling handshake touches a public server; the game
+traffic is direct.
+
+- Host: *Play with friends → Create a room* → share the 5-letter code.
+- Guest: *I have a room code* → enter it and join.
+- The host starts the match once at least two players are in.
+
+**Limits you should know**
+
+- Both devices need an internet connection, and the site must be served over **HTTPS** (GitHub Pages is).
+- If the host leaves, the room closes. There is no server to migrate it.
+- Signalling uses the free public PeerJS cloud. If it is unavailable, the app tells you and solo play still works.
+
+Offline matches (against house players or pass-and-play) work with no connection at all.
+
+---
+
+## Project layout
+
+```
+index.html              App shell: every screen lives here
+404.html                Self-contained not-found page (deep-path safe redirect)
+manifest.json           PWA manifest (icons, shortcuts, screenshots)
+sw.js                   Service worker: app-shell precache + runtime caching
+.nojekyll               Serve files as-is, no Jekyll pass
+css/atlas.css           Design system (tokens, screens, deck, sheets)
+js/datasets.js          Word banks: word + emoji + caption per category
+js/engine.js            Pure game rules (turns, rounds, scoring, repeats)
+js/cards.js             Card art resolver + deck component (deal / swipe)
+js/profile.js           Local profile, stats, ranking and history
+js/bots.js              House players for offline matches
+js/net.js               PeerJS transport (host + guest)
+js/ui.js                Screens, deck wiring, timer, room controller
+js/pwa.js               Service-worker registration + install prompt
+js/sound-engine.js      Procedural Web Audio sounds
+js/vendor/              PeerJS + canvas-confetti, vendored (no CDN at runtime)
+fonts/                  Inter (self-hosted, offline safe)
+assets/                 Icons, favicons, photography
+scripts/                Dev server, validators and tests
+```
+
+---
+
+## Develop
 
 ```bash
-# 1. Validate every local asset reference, the manifest and required files
-node scripts/check-site.mjs
-
-# 2. Preview exactly as GitHub Pages serves it (site under /Atlas-game/)
-node scripts/serve.mjs --base /Atlas-game
-#    -> http://localhost:8080/Atlas-game/
-
-# 3. Or preview at the domain root
-node scripts/serve.mjs
-#    -> http://localhost:8080/
+npm install          # only for the tests (jsdom)
+npm start            # http://localhost:8080/Atlas-game/  — mirrors GitHub Pages
 ```
 
-The same validation runs automatically in CI (`.github/workflows/site-check.yml`) on every
-push and pull request to `main`.
+`npm start` serves the site under `/Atlas-game/`, exactly like GitHub Pages. That subpath is where
+broken asset paths show up, so test there rather than at a domain root.
+
+### Tests
+
+```bash
+npm run check        # every src/href/url()/manifest icon/SW precache entry resolves
+npm test             # 27 engine tests: turns, rounds, scoring, repeats, dead letters
+npm run test:ui      # 51 checks: onboarding → deck → validation → swipe → results → ranking
+npm run test:net     # 30 checks: two clients, real room handshake, synced turns
+npm run test:all     # all of the above
+```
+
+CI runs the same four commands on every push and pull request (`.github/workflows/site-check.yml`).
+The workflow **validates only** — it never deploys.
+
+---
+
+## Deploy to GitHub Pages
+
+1. Push to `main`.
+2. **Settings → Pages → Source: `Deploy from a branch` → Branch `main` → Folder `/ (root)`.**
+3. The site publishes at `https://<user>.github.io/<repo>/`.
+
+Keep local references **relative**. A leading slash resolves to the domain root and breaks project
+pages:
+
+| Reference | Resolves to | |
+| --- | --- | --- |
+| `css/atlas.css` | `https://<user>.github.io/<repo>/css/atlas.css` | ✅ |
+| `/css/atlas.css` | `https://<user>.github.io/css/atlas.css` | ❌ 404 |
+
+`npm run check` fails on root-absolute paths and on missing files.
+
+### After a deploy
+
+Asset links carry `?v=3` and the service worker caches the shell. When you change CSS/JS:
+
+1. Bump `?v=3` to `?v=4` in `index.html`.
+2. Bump `VERSION` in `sw.js` (`atlas-v3.0.0` → `atlas-v3.0.1`) so installed apps refresh their cache.
+
+---
+
+## Editing the game
+
+- **Add words:** `js/datasets.js` → `["WORD", "🎯", "Caption"]`. Run `npm test`; the suite fails if any
+  word ends with a letter that has no continuation in the same category.
+- **Tune rules:** `js/engine.js` → `DEFAULTS` (turn timer, passes, strikes, round cap) and
+  `scoreFor()` for the point curve.
+- **Restyle:** `css/atlas.css` tokens at the top (`--cream`, `--sand`, radii, type scale).
 
 ---
 
@@ -102,18 +151,8 @@ push and pull request to `main`.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| Page loads but is completely unstyled | Stylesheet 404 — the URL in `<link>` does not match the file location | Keep `css/atlas.css` at `css/atlas.css`, or update the link; run `node scripts/check-site.mjs` |
-| Buttons and modals do nothing | `SoundEngine` / `AtlasGameEngine` undefined because the JS 404'd | Check the `js/` references and the browser console |
-| CSS works on `localhost` but not on Pages | A root-absolute path (`/css/...`) | Use a relative path (`css/...`) |
-| Old styling after a deploy | Browser / CDN cache | Bump the `?v=` query string |
-| Pages shows a 404 for a subpage | File name typo or wrong folder | The custom `404.html` redirects to the nearest valid site root |
-
----
-
-## Gameplay notes
-
-- Chain a word starting with the **last letter** of the previous word.
-- Faster answers earn a speed bonus (up to +5), streaks add more.
-- Each player has 3 passes; 3 strikes eliminates a player.
-- Words missing from the curated dataset trigger a 10-second peer vote.
-- Opponent turns are simulated locally, so the game is fully playable solo in one tab.
+| Page loads unstyled | Stylesheet 404 — path does not match the file | Keep `css/atlas.css`; run `npm run check` |
+| No install prompt | No service worker, or not HTTPS | `sw.js` must be reachable from the site root |
+| “Room not found” | Wrong code, host closed the room, or signalling is blocked | Re-check the code; both devices online |
+| Old styling after deploy | Browser / service-worker cache | Bump `?v=` and `VERSION`, then reload |
+| Stats disappeared | Private mode or cleared storage | Stats live in `localStorage` on the device |
