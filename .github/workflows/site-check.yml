@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   verify:
-    name: Verify static site
+    name: Verify app
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -22,11 +22,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
-      - name: Check that every stylesheet, script and icon resolves
-        run: node scripts/check-site.mjs
+      - name: Install test dependencies
+        run: npm ci
 
-      - name: Check JavaScript syntax
-        run: |
-          node --check js/game-engine.js
-          node --check js/sound-engine.js
+      - name: Check every stylesheet, script, icon and precached file resolves
+        run: npm run check
+
+      - name: Engine rules (turns, rounds, scoring, repeats, dead letters)
+        run: npm test
+
+      - name: UI smoke test in a real DOM
+        run: npm run test:ui
+
+      - name: Two-client multiplayer sync
+        run: npm run test:net
