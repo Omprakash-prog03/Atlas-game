@@ -1,0 +1,10 @@
+{
+  "name": "ATLAS — Multiplayer Word-Chain",
+  "short_name": "ATLAS",
+  "description": "Premium real-time multiplayer social word-chain game.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#090A0D",
+  "theme_color": "#090A0D",
+  "orientation": "portrait"
+}

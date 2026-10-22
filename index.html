@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>ATLAS — Multiplayer Word-Chain Game</title>
+  <link rel="stylesheet" href="css/atlas.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div style="width:34px; height:34px; border-radius:10px; background:rgba(229,169,60,0.2); border:1px solid rgba(229,169,60,0.5); display:flex; align-items:center; justify-content:center; color:#e5a93c; font-weight:900;">
+          &#9670;
+        </div>
+        <span style="font-size:22px; font-weight:900; letter-spacing:1px; color:#f5f5f4;">ATLAS</span>
+      </div>
+      <button id="soundToggleBtn" class="btn btn-secondary btn-icon" style="border-radius:12px;">&#128266;</button>
+    </header>
+
+    <!-- Hero -->
+    <section style="text-align:center; margin: auto 0; padding: 20px 0;">
+      <div style="display:inline-block; padding: 4px 14px; border-radius:20px; background:rgba(229,169,60,0.12); border:1px solid rgba(229,169,60,0.3); color:#e5a93c; font-size:11px; font-weight:900; letter-spacing:1px; margin-bottom:16px;">
+        MULTIPLAYER WORD-CHAIN
+      </div>
+      <h1 style="font-size:46px; font-weight:900; line-height:1.05; letter-spacing:-1px; text-transform:uppercase;">
+        THINK FAST.<br>
+        <span style="background: linear-gradient(90deg, #e5a93c, #f59e0b, #c85a32); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+          KNOW THE WORLD.
+        </span>
+      </h1>
+      <p style="font-size:13px; color:#a8a29e; max-width:300px; margin: 12px auto 0; line-height:1.5;">
+        The real-time multiplayer chain battle for 3 to 10 players. Next word starts with the last letter.
+      </p>
+    </section>
+
+    <!-- Primary Actions -->
+    <section style="display:flex; flex-direction:column; gap:12px; margin-bottom: 16px;">
+      <button id="openCreateBtn" class="btn btn-primary" style="width:100%; height:54px; font-size:16px; letter-spacing:0.5px;">
+        &#9654; PLAY NOW / CREATE ROOM
+      </button>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <button id="openCustomBtn" class="btn btn-secondary">
+          &#10010; Custom Room
+        </button>
+        <button id="openJoinBtn" class="btn btn-secondary">
+          &#128273; Enter Code
+        </button>
+      </div>
+    </section>
+
+    <!-- Navigation Bar -->
+    <footer style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px;">
+      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; text-align:center;">
+        <button id="openRankBtn" class="btn btn-secondary" style="height:44px; padding:0; flex-direction:column; font-size:10px; gap:2px;">
+          &#127942; <span>Ranking</span>
+        </button>
+        <button id="openMedalsBtn" class="btn btn-secondary" style="height:44px; padding:0; flex-direction:column; font-size:10px; gap:2px;">
+          &#127894; <span>Medals</span>
+        </button>
+        <button id="openRulesBtn" class="btn btn-secondary" style="height:44px; padding:0; flex-direction:column; font-size:10px; gap:2px;">
+          &#128214; <span>Rules</span>
+        </button>
+        <button id="openProfileBtn" class="btn btn-secondary" style="height:44px; padding:0; flex-direction:column; font-size:10px; gap:2px;">
+          &#128100; <span>Profile</span>
+        </button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- CREATE MATCH MODAL -->
+  <div id="createModal" class="modal-overlay">
+    <div class="modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="font-size:18px; font-weight:900; text-transform:uppercase;">Create Match</h3>
+        <button id="closeCreateBtn" class="btn btn-secondary btn-icon" style="width:32px; height:32px;">&#10005;</button>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="display:block; font-size:11px; font-weight:700; color:#a8a29e; text-transform:uppercase; margin-bottom:6px;">Your Nickname</label>
+        <input id="nicknameInput" type="text" class="atlas-input" placeholder="e.g. Om_Traveler" value="Player">
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="display:block; font-size:11px; font-weight:700; color:#a8a29e; text-transform:uppercase; margin-bottom:6px;">Select Category</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <button class="btn btn-secondary cat-btn" data-cat="PLACES" style="border-color:#e5a93c; color:#e5a93c;">Places</button>
+          <button class="btn btn-secondary cat-btn" data-cat="COUNTRIES">Countries</button>
+          <button class="btn btn-secondary cat-btn" data-cat="CITIES">Cities</button>
+          <button class="btn btn-secondary cat-btn" data-cat="ANIMALS">Animals</button>
+          <button class="btn btn-secondary cat-btn" data-cat="MOVIES">Movies</button>
+          <button class="btn btn-secondary cat-btn" data-cat="FOOD">Food</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <label style="display:block; font-size:11px; font-weight:700; color:#a8a29e; text-transform:uppercase; margin-bottom:6px;">Turn Timer</label>
+        <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px;">
+          <button class="btn btn-secondary timer-btn" data-sec="10">10s</button>
+          <button class="btn btn-primary timer-btn" data-sec="15">15s</button>
+          <button class="btn btn-secondary timer-btn" data-sec="20">20s</button>
+          <button class="btn btn-secondary timer-btn" data-sec="30">30s</button>
+        </div>
+      </div>
+
+      <button id="startLobbyBtn" class="btn btn-primary" style="width:100%; height:50px;">
+        CREATE ROOM & ENTER LOBBY
+      </button>
+    </div>
+  </div>
+
+  <!-- JOIN MODAL -->
+  <div id="joinModal" class="modal-overlay">
+    <div class="modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="font-size:18px; font-weight:900; text-transform:uppercase;">Join Game</h3>
+        <button id="closeJoinBtn" class="btn btn-secondary btn-icon" style="width:32px; height:32px;">&#10005;</button>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="display:block; font-size:11px; font-weight:700; color:#a8a29e; text-transform:uppercase; margin-bottom:6px;">6-Letter Room Code</label>
+        <input id="joinCodeInput" type="text" class="atlas-input" placeholder="e.g. AT7KQ" maxlength="6" style="text-align:center; font-size:20px; letter-spacing:3px; text-transform:uppercase; color:#e5a93c;">
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <label style="display:block; font-size:11px; font-weight:700; color:#a8a29e; text-transform:uppercase; margin-bottom:6px;">Your Nickname</label>
+        <input id="joinNickInput" type="text" class="atlas-input" placeholder="e.g. Om_Traveler" value="Player">
+      </div>
+
+      <button id="confirmJoinBtn" class="btn btn-primary" style="width:100%; height:50px;">
+        JOIN MATCH
+      </button>
+    </div>
+  </div>
+
+  <!-- RULES MODAL -->
+  <div id="rulesModal" class="modal-overlay">
+    <div class="modal-card" style="max-height:85vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="font-size:18px; font-weight:900; text-transform:uppercase;">Rules of ATLAS</h3>
+        <button id="closeRulesBtn" class="btn btn-secondary btn-icon" style="width:32px; height:32px;">&#10005;</button>
+      </div>
+      <div style="font-size:13px; line-height:1.6; color:#a8a29e;">
+        <p style="margin-bottom:10px;"><strong style="color:#f5f5f4;">1. Word Chain:</strong> Next answer must start with the last letter of the previous word (e.g. AFRICA &rarr; AMERICA &rarr; AUSTRALIA).</p>
+        <p style="margin-bottom:10px;"><strong style="color:#f5f5f4;">2. Speed Bonus:</strong> Answer faster to get up to +5 bonus points.</p>
+        <p style="margin-bottom:10px;"><strong style="color:#f5f5f4;">3. 3 Passes:</strong> Each player has 3 passes to skip without penalty.</p>
+        <p style="margin-bottom:10px;"><strong style="color:#f5f5f4;">4. Unknown Words:</strong> If a word is not recognized, players vote whether to accept it.</p>
+        <p><strong style="color:#f5f5f4;">5. Elimination:</strong> 3 strikes eliminates a player. Last survivor wins!</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/sound-engine.js"></script>
+  <script src="js/game-engine.js"></script>
+  <script>
+    let selectedCat = "PLACES";
+    let selectedTimer = 15;
+
+    // Modals
+    const createModal = document.getElementById("createModal");
+    const joinModal = document.getElementById("joinModal");
+    const rulesModal = document.getElementById("rulesModal");
+
+    document.getElementById("openCreateBtn").onclick = () => { SoundEngine.playClick(); createModal.classList.add("active"); };
+    document.getElementById("openCustomBtn").onclick = () => { SoundEngine.playClick(); createModal.classList.add("active"); };
+    document.getElementById("closeCreateBtn").onclick = () => { SoundEngine.playClick(); createModal.classList.remove("active"); };
+
+    document.getElementById("openJoinBtn").onclick = () => { SoundEngine.playClick(); joinModal.classList.add("active"); };
+    document.getElementById("closeJoinBtn").onclick = () => { SoundEngine.playClick(); joinModal.classList.remove("active"); };
+
+    document.getElementById("openRulesBtn").onclick = () => { SoundEngine.playClick(); rulesModal.classList.add("active"); };
+    document.getElementById("closeRulesBtn").onclick = () => { SoundEngine.playClick(); rulesModal.classList.remove("active"); };
+
+    // Category selection
+    document.querySelectorAll(".cat-btn").forEach(btn => {
+      btn.onclick = () => {
+        SoundEngine.playClick();
+        document.querySelectorAll(".cat-btn").forEach(b => { b.style.borderColor = ""; b.style.color = ""; });
+        btn.style.borderColor = "#e5a93c";
+        btn.style.color = "#e5a93c";
+        selectedCat = btn.getAttribute("data-cat");
+      };
+    });
+
+    // Timer selection
+    document.querySelectorAll(".timer-btn").forEach(btn => {
+      btn.onclick = () => {
+        SoundEngine.playClick();
+        document.querySelectorAll(".timer-btn").forEach(b => { b.className = "btn btn-secondary timer-btn"; });
+        btn.className = "btn btn-primary timer-btn";
+        selectedTimer = parseInt(btn.getAttribute("data-sec"));
+      };
+    });
+
+    // Start Lobby
+    document.getElementById("startLobbyBtn").onclick = () => {
+      SoundEngine.playFanfare();
+      const nick = document.getElementById("nicknameInput").value || "Player";
+      const roomCode = "AT" + Math.random().toString(36).substring(2, 6).toUpperCase();
+      const gameConfig = {
+        category: selectedCat,
+        turnDurationSeconds: selectedTimer,
+        maxPasses: 3,
+        code: roomCode,
+        hostNick: nick
+      };
+      localStorage.setItem("atlas_room_config", JSON.stringify(gameConfig));
+      window.location.href = "lobby.html";
+    };
+
+    // Join
+    document.getElementById("confirmJoinBtn").onclick = () => {
+      SoundEngine.playFanfare();
+      const code = (document.getElementById("joinCodeInput").value || "AT7KQ").toUpperCase();
+      const nick = document.getElementById("joinNickInput").value || "Player";
+      const gameConfig = {
+        category: "PLACES",
+        turnDurationSeconds: 15,
+        maxPasses: 3,
+        code: code,
+        hostNick: nick
+      };
+      localStorage.setItem("atlas_room_config", JSON.stringify(gameConfig));
+      window.location.href = "lobby.html";
+    };
+
+    // Sound toggle
+    document.getElementById("soundToggleBtn").onclick = () => {
+      SoundEngine.enabled = !SoundEngine.enabled;
+      document.getElementById("soundToggleBtn").innerHTML = SoundEngine.enabled ? "&#128266;" : "&#128263;";
+    };
+  </script>
+</body>
+</html>
