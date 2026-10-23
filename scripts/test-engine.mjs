@@ -370,3 +370,251 @@ test("a playable letter is left alone", () => {
   assert.equal(state.letterReset.from, "Z");
   assert.equal(Engine.hasUnusedLetter(state, state.requiredLetter), true);
 });
+
+// ===========================================================================
+// v4 — combo economy and power-ups
+// ===========================================================================
+
+function econMatch(cfg = {}) {
+  const state = Engine.createMatch({
+    category: "PLACES",
+    turnSeconds: 20,
+    startEnergy: 3,
+    players: players(2),
+    seed: "TEST-SEED",
+    ...cfg
+  });
+  Engine.start(state, { letter: "A" });
+  return state;
+}
+
+const give = (state, id, energy) => { Engine.playerById(state, id).energy = energy; };
+
+test("players start with the configured energy and the economy can be disabled", () => {
+  const on = econMatch();
+  assert.equal(on.players[0].energy, 3);
+  assert.equal(on.config.powerups, true);
+  const off = Engine.createMatch({ players: players(2), powerups: false, combo: false });
+  assert.equal(off.config.powerups, false);
+  assert.equal(off.config.combo, false);
+});
+
+test("combo stays x1 for the first two links and climbs at three", () => {
+  const state = econMatch();
+  assert.equal(Engine.multiplierFor(state), 1);
+  const first = Engine.submit(state, state.activeId, "AFRICA");
+  assert.equal(first.multiplier, 1, "first card must score honestly");
+  assert.equal(state.combo, 1);
+  Engine.submit(state, state.activeId, "ASIA");
+  assert.equal(Engine.multiplierFor(state), 1);
+  const third = Engine.submit(state, state.activeId, "AMERICA");
+  assert.equal(third.multiplier, 1.25);
+  assert.equal(Engine.heatFor(state.combo).name, "Warming");
+});
+
+test("combo multiplier actually scales the card total", () => {
+  const cold = econMatch();
+  const coldRes = Engine.submit(cold, cold.activeId, "ATLANTIC OCEAN");
+  const hot = econMatch();
+  hot.combo = 8;
+  const hotRes = Engine.submit(hot, hot.activeId, "ATLANTIC OCEAN");
+  assert.ok(hotRes.points > coldRes.points, `${hotRes.points} should beat ${coldRes.points}`);
+  assert.equal(hotRes.multiplier, 2);
+  assert.equal(hotRes.card.breakdown.comboMultiplier, 2);
+  assert.equal(hotRes.card.breakdown.raw, coldRes.card.breakdown.raw);
+});
+
+test("a timeout freezes the chain and a pass cools it by one", () => {
+  const state = econMatch();
+  Engine.submit(state, state.activeId, "AFRICA");
+  Engine.submit(state, state.activeId, "ASIA");
+  assert.equal(state.combo, 2);
+  state.deadline = Date.now() - 1;
+  Engine.tick(state, Date.now());
+  assert.equal(state.combo, 0, "timeout must freeze the chain");
+
+  const p = econMatch();
+  Engine.submit(p, p.activeId, "AFRICA");
+  Engine.submit(p, p.activeId, "ASIA");
+  Engine.pass(p, p.activeId);
+  assert.equal(p.combo, 1, "pass cools by exactly one link");
+});
+
+test("accepted cards charge energy and the meter is capped", () => {
+  const state = econMatch({ maxEnergy: 6, startEnergy: 5 });
+  const me = state.players[0];
+  Engine.submit(state, state.activeId, "ATLANTIC OCEAN"); // fast + long + no heat
+  assert.ok(me.energy > 5, "a good card must charge energy");
+  assert.ok(me.energy <= 6, "energy must respect the cap");
+  assert.ok(me.energyEarned >= 1);
+});
+
+test("hint reveals a mask without leaking the answer", () => {
+  const state = econMatch({ startEnergy: 5 });
+  const me = state.players[0];
+  const res = Engine.usePower(state, me.id, "hint");
+  assert.equal(res.ok, true);
+  assert.ok(res.effect.pattern.includes("\u2022"), "pattern must be masked");
+  assert.equal(res.effect.pattern[0], state.requiredLetter);
+  assert.equal(me.energy, 2, "hint costs 3");
+  assert.equal(me.powersUsed.hint, 1);
+  // The state must not contain the revealed word.
+  const leaked = Data.wordsFor("PLACES", state.requiredLetter)
+    .filter((w) => !state.used[Data.normalize(w)])
+    .some((w) => JSON.stringify(state.powerLog).includes(w));
+  assert.equal(leaked, false, "the masked answer must not cross into state");
+});
+
+test("freeze extends the deadline and the turn budget", () => {
+  const state = econMatch({ startEnergy: 5 });
+  const before = state.deadline;
+  const res = Engine.usePower(state, state.activeId, "freeze");
+  assert.equal(res.ok, true);
+  assert.equal(res.effect.addedSeconds, state.config.freezeSeconds);
+  assert.ok(state.deadline > before, "deadline must move out");
+  assert.equal(state.turnBudgetMs, state.turnSeconds * 1000 + state.config.freezeSeconds * 1000);
+});
+
+test("double arms, then doubles exactly the next card", () => {
+  const state = econMatch({ startEnergy: 6 });
+  const armed = Engine.usePower(state, state.activeId, "double");
+  assert.equal(armed.ok, true);
+  assert.equal(state.players[0].armed.double, true);
+
+  const plain = econMatch();
+  const plainRes = Engine.submit(plain, plain.activeId, "AFRICA");
+  const dbl = Engine.submit(state, state.activeId, "AFRICA");
+  assert.equal(dbl.multiplier, 2);
+  assert.equal(dbl.points, plainRes.points * 2);
+  assert.equal(state.players[0].armed.double, false, "double is consumed by the card");
+  assert.equal(state.players[0].doublesCashed, 1);
+});
+
+test("an armed double that times out is burned with an energy penalty", () => {
+  const state = econMatch({ startEnergy: 8 });
+  const me = state.players[0];
+  Engine.usePower(state, me.id, "double");
+  const before = me.energy;
+  state.deadline = Date.now() - 1;
+  const res = Engine.tick(state, Date.now());
+  const types = res.events.map((e) => e.type);
+  assert.ok(types.includes("double_lost"), "double_lost event expected");
+  assert.equal(me.armed.double, false);
+  assert.equal(me.energy, before - state.config.doublePenalty);
+});
+
+test("shield absorbs the strike instead of the player", () => {
+  const state = econMatch({ startEnergy: 8 });
+  const me = state.players[0];
+  Engine.usePower(state, me.id, "shield");
+  assert.equal(me.armed.shield, true);
+  state.deadline = Date.now() - 1;
+  const res = Engine.tick(state, Date.now());
+  assert.ok(res.events.some((e) => e.type === "shield_saved"));
+  assert.equal(me.strikes, 0, "the shield ate the strike");
+  assert.equal(me.shieldsUsed, 1);
+  assert.equal(me.armed.shield, false, "shield is single-use");
+});
+
+test("wild swaps the required letter and rejects dead or same letters", () => {
+  const state = econMatch({ startEnergy: 9 });
+  const from = state.requiredLetter;
+  const bad = Engine.usePower(state, state.activeId, "wild", { letter: from });
+  assert.equal(bad.ok, false);
+  assert.equal(bad.reason, "same-letter");
+
+  // PLACES answers every letter, so burn the Q pool to make it dead.
+  Data.wordsFor("PLACES", "Q").forEach((w) => { state.used[Data.normalize(w)] = true; });
+  const dead = Engine.usePower(state, state.activeId, "wild", { letter: "Q" });
+  assert.equal(dead.ok, false, "Q has no unused answers left");
+  assert.equal(dead.reason, "dead-letter");
+
+  const ok = Engine.usePower(state, state.activeId, "wild", { letter: "K" });
+  assert.equal(ok.ok, true);
+  assert.equal(state.requiredLetter, "K");
+  assert.equal(state.letterReset.wild, true);
+  assert.equal(state.letterReset.from, from);
+});
+
+test("power limits: per-match charges and per-turn cap are enforced", () => {
+  // Raise the per-turn cap so we can exercise the per-match charge limit first.
+  const state = econMatch({ startEnergy: 30, maxPowersPerTurn: 5 });
+  const me = state.players[0];
+  for (let i = 0; i < Engine.POWERS.hint.limit; i++) {
+    assert.equal(Engine.usePower(state, me.id, "hint").ok, true);
+  }
+  const exhausted = Engine.usePower(state, me.id, "hint");
+  assert.equal(exhausted.ok, false);
+  assert.equal(exhausted.reason, "exhausted");
+
+  const fresh = econMatch({ startEnergy: 30, maxPowersPerTurn: 1 });
+  assert.equal(Engine.usePower(fresh, fresh.activeId, "hint").ok, true);
+  const capped = Engine.usePower(fresh, fresh.activeId, "freeze");
+  assert.equal(capped.ok, false);
+  assert.equal(capped.reason, "turn-limit");
+});
+
+test("powers are refused off-turn when they need a turn", () => {
+  const state = econMatch({ startEnergy: 9 });
+  const other = state.players[1];
+  const res = Engine.usePower(state, other.id, "freeze");
+  assert.equal(res.ok, false);
+  assert.equal(res.reason, "not-your-turn");
+  // SHIELD is the exception: it may be armed on someone else's turn.
+  const shield = Engine.usePower(state, other.id, "shield");
+  assert.equal(shield.ok, true);
+});
+
+test("power status reports affordability and reasons without mutating", () => {
+  const state = econMatch({ startEnergy: 0 });
+  const before = JSON.stringify(state);
+  const status = Engine.powerStatus(state, state.players[0].id);
+  assert.equal(status.energy, 0);
+  const double = status.powers.find((p) => p.key === "double");
+  assert.equal(double.affordable, false);
+  assert.equal(double.blocked, "Needs 5 energy");
+  assert.equal(JSON.stringify(state), before, "powerStatus must be pure");
+});
+
+test("the seeded rng makes identical seeds reproduce identical choices", () => {
+  const run = () => {
+    const state = Engine.createMatch({ category: "FOOD", players: players(2), seed: "SAME" });
+    Engine.start(state, { letter: "Z" });
+    Data.wordsFor("FOOD", "T").forEach((w) => { state.used[Data.normalize(w)] = true; });
+    Engine.submit(state, state.activeId, "ZEST");
+    return state.letterReset.to;
+  };
+  assert.equal(run(), run(), "same seed must produce the same fresh-chain letter");
+});
+
+test("power log survives a JSON round-trip (needed for network sync)", () => {
+  const state = econMatch({ startEnergy: 9 });
+  Engine.usePower(state, state.activeId, "hint");
+  Engine.usePower(state, state.activeId, "freeze");
+  const copy = JSON.parse(JSON.stringify(state));
+  assert.equal(copy.powerLog.length, state.powerLog.length);
+  assert.equal(copy.players[0].powersUsed.hint, 1);
+  assert.equal(copy.turnBudgetMs, state.turnBudgetMs);
+});
+
+test("house players fire powers through the engine and pay for them", () => {
+  require("../js/bots.js"); // browser-style module: it registers on globalThis
+  const Bots = globalThis.AtlasBots;
+  assert.ok(Bots && typeof Bots.choosePower === "function", "bots module must expose choosePower");
+
+  const state = econMatch({ startEnergy: 9, difficulty: "ruthless" });
+  const bot = state.players[1];
+  state.activeId = bot.id; // turn-based powers only fire on your own turn
+  state.combo = 5;         // a hot chain is exactly when a double pays off
+  let fired = null;
+  for (let i = 0; i < 24 && !fired; i++) {
+    const choice = Bots.choosePower(state, bot.id, Data, Engine, "ruthless");
+    if (choice) {
+      const res = Engine.usePower(state, bot.id, choice.key, { letter: choice.letter });
+      if (res.ok) fired = res;
+    }
+  }
+  assert.ok(fired, "a ruthless bot with energy should fire something");
+  assert.ok(bot.energy < 9, "the bot must have paid real energy");
+  assert.ok(state.powerLog.some((e) => e.playerId === bot.id), "bot power use is logged like a human's");
+});

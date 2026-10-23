@@ -2,17 +2,25 @@
   "id": "./",
   "name": "ATLAS — Word Chain Card Game",
   "short_name": "ATLAS",
-  "description": "A word-chain card game. Name a place, a film, an animal — every answer becomes an iconic card that swipes away as the chain continues.",
+  "description": "ATLAS is a word-chain card game. Name a place, a film, an animal — the card reveals its icon, swipes away, and the chain continues.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#0A0908",
   "theme_color": "#0A0908",
   "lang": "en",
   "dir": "ltr",
-  "categories": ["games", "entertainment", "education"],
+  "categories": [
+    "games",
+    "entertainment",
+    "education"
+  ],
   "prefer_related_applications": false,
   "icons": [
     {
@@ -61,13 +69,23 @@
       "name": "Play solo",
       "short_name": "Solo",
       "url": "./index.html?play=solo",
-      "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Ranking",
       "short_name": "Ranking",
       "url": "./index.html?screen=ranking",
-      "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

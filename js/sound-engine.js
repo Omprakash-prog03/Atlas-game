@@ -145,6 +145,94 @@
     playRound: function () {
       this.tone(523.25, { duration: 0.16, volume: 0.1 });
       this.tone(783.99, { delay: 0.1, duration: 0.22, volume: 0.1 });
+    },
+
+    // ---------------------------------------------------- v4 economy sounds
+
+    /** Energy landing on the meter: a short rising blip. */
+    playCharge: function (amount) {
+      var steps = Math.max(1, Math.min(4, amount || 1));
+      for (var i = 0; i < steps; i++) {
+        this.tone(660 + i * 130, { delay: i * 0.045, duration: 0.09, type: "triangle", volume: 0.07 });
+      }
+    },
+
+    /** A power-up fired: bright, mechanical, unmistakably "you spent something". */
+    playPower: function (key) {
+      switch (key) {
+        case "freeze": this.playFreeze(); break;
+        case "shield": this.playShield(); break;
+        case "double": this.playDoubleArm(); break;
+        case "wild": this.playWild(); break;
+        default: this.playHint();
+      }
+    },
+
+    playHint: function () {
+      this.tone(880, { duration: 0.1, type: "sine", volume: 0.1 });
+      this.tone(1320, { delay: 0.07, duration: 0.14, type: "sine", volume: 0.08 });
+      this.buzz(10);
+    },
+
+    playFreeze: function () {
+      this.noise({ duration: 0.3, freq: 3200, sweepTo: 900, volume: 0.1, filter: "highpass", decay: 2.2 });
+      this.tone(1180, { duration: 0.22, type: "sine", glideTo: 620, volume: 0.09 });
+      this.buzz([8, 24, 8]);
+    },
+
+    playDoubleArm: function () {
+      this.tone(392, { duration: 0.12, type: "triangle", volume: 0.11 });
+      this.tone(587.33, { delay: 0.09, duration: 0.2, type: "triangle", volume: 0.11 });
+      this.buzz([14, 20, 14]);
+    },
+
+    playWild: function () {
+      var self = this;
+      [523.25, 698.46, 880, 698.46].forEach(function (freq, i) {
+        self.tone(freq, { delay: i * 0.05, duration: 0.12, type: "square", volume: 0.06 });
+      });
+      this.buzz([10, 16, 10]);
+    },
+
+    playShield: function () {
+      this.tone(220, { duration: 0.18, type: "sine", volume: 0.13 });
+      this.noise({ duration: 0.22, freq: 1400, sweepTo: 400, volume: 0.09, filter: "lowpass", decay: 2.4 });
+      this.buzz([18, 26, 18]);
+    },
+
+    /** A shield actually absorbing a strike. */
+    playShieldBreak: function () {
+      this.noise({ duration: 0.34, freq: 900, sweepTo: 260, volume: 0.17, filter: "bandpass", decay: 1.6 });
+      this.tone(330, { duration: 0.24, type: "triangle", glideTo: 140, volume: 0.12 });
+      this.buzz([40, 30, 40]);
+    },
+
+    /** The table combo climbing into a new tier. */
+    playComboUp: function (tierIndex) {
+      var base = 523.25 * Math.pow(1.122, Math.min(9, tierIndex || 0));
+      this.tone(base, { duration: 0.14, type: "triangle", volume: 0.1 });
+      this.tone(base * 1.5, { delay: 0.08, duration: 0.2, type: "triangle", volume: 0.09 });
+      this.buzz(12);
+    },
+
+    /** The chain going cold: a descending, deflating pair. */
+    playComboBreak: function () {
+      this.tone(392, { duration: 0.16, type: "sine", glideTo: 196, volume: 0.11 });
+      this.tone(294, { delay: 0.1, duration: 0.24, type: "sine", glideTo: 130, volume: 0.09 });
+    },
+
+    /** An armed double burning on a timeout. */
+    playDoubleLost: function () {
+      this.tone(440, { duration: 0.14, type: "sawtooth", glideTo: 160, volume: 0.1 });
+      this.noise({ duration: 0.2, freq: 1800, sweepTo: 500, volume: 0.08, filter: "bandpass", decay: 2 });
+      this.buzz([30, 30, 30]);
+    },
+
+    /** Denied: not enough energy, no charges left, wrong moment. */
+    playDenied: function () {
+      this.tone(200, { duration: 0.1, type: "square", volume: 0.08 });
+      this.tone(160, { delay: 0.07, duration: 0.12, type: "square", volume: 0.07 });
+      this.buzz(24);
     }
   };
 

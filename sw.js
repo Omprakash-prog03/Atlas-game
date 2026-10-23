@@ -8,7 +8,7 @@
  *
  * Bump VERSION whenever the shell changes; old caches are removed on activate.
  */
-const VERSION = "atlas-v3.0.0";
+const VERSION = "atlas-v4.0.0";
 const SHELL_CACHE = VERSION + "-shell";
 const ASSET_CACHE = VERSION + "-assets";
 
@@ -16,8 +16,12 @@ const SHELL = [
   "./",
   "./index.html",
   "./404.html",
+  "./terms.html",
+  "./privacy.html",
   "./manifest.json",
   "./css/atlas.css",
+  "./brand.config.js",
+  "./js/brand.js",
   "./js/datasets.js",
   "./js/engine.js",
   "./js/cards.js",

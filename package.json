@@ -1,20 +1,41 @@
 {
   "name": "atlas-game",
-  "version": "3.0.0",
-  "private": true,
-  "description": "ATLAS \u2014 a word-chain card game that installs like an app and plays peer-to-peer.",
+  "version": "4.0.0",
+  "description": "ATLAS \u2014 a word-chain card game with a power-up and combo economy. Installs like an app, plays peer-to-peer, ships under MIT.",
+  "license": "MIT",
+  "author": "Omprakash-prog03",
+  "homepage": "https://github.com/Omprakash-prog03/Atlas-game#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Omprakash-prog03/Atlas-game.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Omprakash-prog03/Atlas-game/issues"
+  },
+  "keywords": [
+    "game",
+    "word-chain",
+    "pwa",
+    "peer-to-peer",
+    "webrtc",
+    "card-game",
+    "offline-first"
+  ],
   "scripts": {
     "start": "node scripts/serve.mjs 8080 --base /Atlas-game",
     "check": "node scripts/check-site.mjs",
+    "rebrand": "node scripts/rebrand.mjs",
+    "rebrand:check": "node scripts/rebrand.mjs --check",
     "test": "node --test scripts/test-engine.mjs",
     "test:ui": "node scripts/test-ui.mjs",
-    "test:all": "npm run check && npm test && npm run test:ui && npm run test:net",
-    "test:net": "node scripts/test-net.mjs"
+    "test:net": "node scripts/test-net.mjs",
+    "test:all": "npm run check && npm run rebrand:check && npm test && npm run test:ui && npm run test:net"
   },
   "devDependencies": {
     "jsdom": "^24.1.3"
   },
   "engines": {
     "node": ">=18"
-  }
+  },
+  "private": true
 }

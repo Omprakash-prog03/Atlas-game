@@ -152,6 +152,19 @@ const screenOf = (d) => d.body.getAttribute("data-screen");
   check("game: player strip", d.querySelectorAll(".pchip").length === 3);
   check("game: timer renders", /^\d+$/.test(d.getElementById("timerValue").textContent), d.getElementById("timerValue").textContent);
 
+  // ---- v4 economy: the tray, the meter and the heat pill are live on entry ----
+  const tray = d.getElementById("powerTray");
+  check("economy: power tray visible", !!tray && tray.hidden === false);
+  check("economy: five power buttons", d.querySelectorAll("#powerRow .power-btn").length === 5,
+    String(d.querySelectorAll("#powerRow .power-btn").length));
+  check("economy: start energy shown", d.getElementById("energyValue").textContent === "3",
+    d.getElementById("energyValue").textContent);
+  check("economy: energy pips match the cap", d.querySelectorAll("#energyPips i").length === app.match.config.maxEnergy);
+  check("economy: combo pill shows x1", d.getElementById("comboPill").hidden === false &&
+    d.getElementById("comboMult").textContent === "\u00D71", d.getElementById("comboMult").textContent);
+  check("economy: hint affordable at start", !d.querySelector("#powerRow .power-btn[data-power='hint']").disabled);
+  check("economy: double not affordable at start", d.querySelector("#powerRow .power-btn[data-power='double']").disabled);
+
   const input = d.getElementById("answerInput");
   const letter = app.match.requiredLetter;
   input.value = letter + "ZZZ";
@@ -185,6 +198,14 @@ const screenOf = (d) => d.body.getAttribute("data-screen");
     d.querySelector(".deck-card--reveal .deck-card__word")?.textContent);
   check("answer: letter advances", app.match.requiredLetter === w.AtlasData.lastLetter(word), app.match.requiredLetter);
   check("answer: points awarded", app.match.players[0].score >= 10, String(app.match.players[0].score));
+
+  // The accepted card must have charged the economy.
+  check("economy: combo increments on a card", app.match.combo === 1, String(app.match.combo));
+  check("economy: energy charged by the card", app.match.players[0].energy > 3,
+    String(app.match.players[0].energy));
+  check("economy: meter re-renders after the card",
+    d.getElementById("energyValue").textContent === String(app.match.players[0].energy),
+    d.getElementById("energyValue").textContent);
 
   await wait(2600);
   // Bots answer quickly in solo mode, so the refresh card may already have been
