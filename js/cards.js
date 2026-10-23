@@ -8,12 +8,37 @@
 (function (root) {
   "use strict";
 
-  var ART = [
+  /**
+   * Art rotation. brand.config.js can repoint every slot, which is how a
+   * white-label build ships its own photography. Fall back to the bundled
+   * desert set when the config is missing or a slot is empty.
+   */
+  var FALLBACK_ART = [
     "assets/img/hero-dunes.jpg",
     "assets/img/card-coast.jpg",
     "assets/img/hero-ridge.jpg",
     "assets/img/card-camp.jpg"
   ];
+
+  function resolveArt() {
+    var brand = root.AtlasBrand && root.AtlasBrand.config ? root.AtlasBrand.config.art : null;
+    if (!brand) return FALLBACK_ART.slice();
+    var art = [
+      brand.dunes || FALLBACK_ART[0],
+      brand.coast || FALLBACK_ART[1],
+      brand.ridge || FALLBACK_ART[2],
+      brand.camp || FALLBACK_ART[3]
+    ];
+    // Never ship a duplicate path into the rotation.
+    var seen = {};
+    return art.filter(function (path, i) {
+      if (seen[path]) return false;
+      seen[path] = true;
+      return true;
+    });
+  }
+
+  var ART = resolveArt();
 
   // Each world gets a consistent lead photo so the deck changes character.
   var CATEGORY_ART = {
@@ -237,6 +262,8 @@
     emptyMarkup: emptyMarkup,
     photoFor: photoFor,
     ART: ART,
+    FALLBACK_ART: FALLBACK_ART,
+    resolveArt: resolveArt,
     CATEGORY_ART: CATEGORY_ART,
     CATEGORY_TINT: CATEGORY_TINT
   };

@@ -1,0 +1,89 @@
+name: Deploy to GitHub Pages
+
+# Publishes the repository root to GitHub Pages.
+#
+# There is no build step: the repository root IS the site. The job below first
+# runs the full verification suite (site check, brand sync, engine rules, UI
+# smoke, multiplayer sync) and only publishes when every check passes, so a
+# broken or half-rebranded build can never reach production.
+#
+# Triggers:
+#   - every push to the deployment branch (main by default)
+#   - manual dispatch, so you can redeploy after flipping the Pages source
+#     branch in Settings without a code change
+#
+# First-time setup (once per repository):
+#   Settings -> Pages -> Source: "GitHub Actions"
+# The workflow uploads the artifact itself; no branch/folder selection needed.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never race two deploys: a newer push supersedes an in-flight one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify before publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install test dependencies
+        run: npm ci
+
+      - name: Static site + brand sync check
+        run: npm run check
+
+      - name: Brand has not drifted from brand.config.js
+        run: npm run rebrand:check
+
+      - name: Engine rules (turns, rounds, scoring, economy, powers)
+        run: npm test
+
+      - name: UI smoke test in a real DOM
+        run: npm run test:ui
+
+      - name: Two-client multiplayer sync
+        run: npm run test:net
+
+  deploy:
+    name: Publish
+    needs: verify
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # The whole repository root is the site. .nojekyll keeps Pages from
+          # running a Jekyll pass over it.
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

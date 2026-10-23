@@ -2,7 +2,7 @@ name: Site check
 
 on:
   push:
-    branches: [main]
+    branches: [main, "arena/*"]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -30,7 +30,10 @@ jobs:
       - name: Check every stylesheet, script, icon and precached file resolves
         run: npm run check
 
-      - name: Engine rules (turns, rounds, scoring, repeats, dead letters)
+      - name: Brand config has not drifted from the static files
+        run: npm run rebrand:check
+
+      - name: Engine rules (turns, rounds, scoring, repeats, economy, powers)
         run: npm test
 
       - name: UI smoke test in a real DOM

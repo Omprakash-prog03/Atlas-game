@@ -16,9 +16,17 @@
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PAGES = ["index.html", "404.html"];
+
+/**
+ * Secondary pages. They get the same structural checks (charset, title,
+ * viewport, theme-colour, resolvable references) but not the full app-asset
+ * list, because they deliberately load no scripts.
+ */
+const LIGHT_PAGES = ["terms.html", "privacy.html"];
 
 const REQUIRED_PAGE_ASSETS = [
   "css/atlas.css",
@@ -43,6 +51,8 @@ const REQUIRED_FILES = [
   "js/engine.js",
   "js/ui.js",
   "js/pwa.js",
+  "js/brand.js",
+  "brand.config.js",
   "js/vendor/peerjs.min.js",
   "js/vendor/confetti.browser.js",
   "assets/icon-192.png",
@@ -50,7 +60,28 @@ const REQUIRED_FILES = [
   "assets/icon-192-maskable.png",
   "assets/icon-512-maskable.png",
   "assets/apple-touch-icon.png",
-  "assets/favicon.svg"
+  "assets/favicon.svg",
+
+  // Commercial-readiness artefacts: a shippable build carries its licence,
+  // its third-party attribution, its provenance record and its legal pages.
+  "LICENSE",
+  "THIRD-PARTY-NOTICES.md",
+  "COMMERCIAL.md",
+  "assets/PROVENANCE.md",
+  "fonts/OFL.txt",
+  "terms.html",
+  "privacy.html",
+  "js/vendor/peerjs.LICENSE.txt",
+  "js/vendor/canvas-confetti.LICENSE.txt"
+];
+
+/** Brand-synced static fields that must match brand.config.js. */
+const BRAND_SYNC = [
+  { file: "index.html", what: "<title>", extract: (s) => (s.match(/<title>([^<]*)<\/title>/i) || [])[1], expect: (b) => b.fullName },
+  { file: "index.html", what: "meta theme-color", extract: (s) => (s.match(/name="theme-color"\s+content="([^"]*)"/i) || [])[1], expect: (b) => b.themeColor },
+  { file: "manifest.json", what: "name", extract: (s) => JSON.parse(s).name, expect: (b) => b.fullName },
+  { file: "manifest.json", what: "short_name", extract: (s) => JSON.parse(s).short_name, expect: (b) => b.shortName },
+  { file: "manifest.json", what: "theme_color", extract: (s) => JSON.parse(s).theme_color, expect: (b) => b.themeColor }
 ];
 
 const errors = [];
@@ -188,7 +219,7 @@ function checkServiceWorker() {
   }
 }
 
-function checkPage(page) {
+function checkPage(page, { light = false } = {}) {
   const html = readFileSync(resolve(ROOT, page), "utf8");
   if (!/<meta\s+charset=/i.test(html)) fail(page, "missing <meta charset>.");
   if (!/<title>[^<]+<\/title>/i.test(html)) fail(page, "missing <title>.");
@@ -200,11 +231,53 @@ function checkPage(page) {
   const refs = attributeRefs(html);
   for (const ref of refs) checkLocalRef(page, ref);
 
-  if (page !== "404.html") {
+  if (!light && page !== "404.html") {
     for (const required of REQUIRED_PAGE_ASSETS) {
       const seen = refs.some((r) => stripQuery(r).replace(/^\.\//, "") === required);
       if (!seen) fail(page, `does not load required asset "${required}".`);
     }
+  }
+}
+
+/**
+ * A rebranded build must not ship half-renamed: the identity fields that
+ * scripts/rebrand.mjs owns are compared against brand.config.js here.
+ */
+function checkBrandSync() {
+  let brand;
+  try {
+    brand = createRequire(import.meta.url)(resolve(ROOT, "brand.config.js"));
+  } catch (e) {
+    fail("brand.config.js", `could not be loaded — ${e.message}`);
+    return;
+  }
+
+  const cache = {};
+  for (const item of BRAND_SYNC) {
+    if (!exists(item.file)) continue;
+    if (!cache[item.file]) cache[item.file] = readFileSync(resolve(ROOT, item.file), "utf8");
+    const actual = item.extract(cache[item.file]);
+    const expected = item.expect(brand);
+    if (String(actual || "").trim() !== String(expected || "").trim()) {
+      fail(item.file, `${item.what} is "${actual}" but brand.config.js says "${expected}" — run \`npm run rebrand\`.`);
+    } else {
+      checked.push({ from: "brand", ref: `${item.file} ${item.what}`, target: expected });
+    }
+  }
+
+  // Photography declared in the config must exist on disk.
+  const art = brand.art || {};
+  for (const [slot, path] of Object.entries(art)) {
+    if (!path) continue;
+    const target = String(path).replace(/^\.\//, "");
+    if (!exists(target)) fail("brand.config.js", `art.${slot} points at missing "${path}".`);
+    else checked.push({ from: "brand", ref: `art.${slot}`, target });
+  }
+
+  // Categories offered by the brand must exist in the word banks.
+  const data = createRequire(import.meta.url)(resolve(ROOT, "js/datasets.js"));
+  for (const key of (brand.features && brand.features.categories) || []) {
+    if (!data.categories[key]) fail("brand.config.js", `features.categories lists unknown world "${key}".`);
   }
 }
 
@@ -221,9 +294,18 @@ function main() {
     checkPage(page);
   }
 
+  for (const page of LIGHT_PAGES) {
+    if (!exists(page)) {
+      fail(page, "legal page is missing — see COMMERCIAL.md.");
+      continue;
+    }
+    checkPage(page, { light: true });
+  }
+
   checkCssUrls("css/atlas.css");
   checkManifest();
   checkServiceWorker();
+  checkBrandSync();
 
   const unique = [...new Map(checked.map((c) => [`${c.from}->${c.ref}`, c])).values()];
   console.log(`ATLAS site check — ${PAGES.length} pages, ${unique.length} local references resolved.`);

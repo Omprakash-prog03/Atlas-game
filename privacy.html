@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Privacy — ATLAS</title>
+  <meta name="description" content="What ATLAS stores, where it stores it, and what never leaves your device.">
+  <meta name="theme-color" content="#0A0908">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="stylesheet" href="css/atlas.css?v=4">
+</head>
+<body class="legal-body">
+<main class="legal">
+  <a class="legal__back" href="index.html">&#8592; Back to the game</a>
+
+  <h1>Privacy</h1>
+  <p class="legal__updated">Effective 23 October 2026 &middot; version 4.0.0</p>
+
+  <p>The short version: <strong>ATLAS has no accounts, no analytics and no
+  advertising. Your progress never leaves your device.</strong> The only network
+  traffic the game generates is (a) loading its own files, and (b) optional
+  peer-to-peer multiplayer, described below.</p>
+
+  <h2>1. What is stored, and where</h2>
+  <p>Everything the game remembers is written to your browser's
+  <code>localStorage</code> under one key, <code>atlas.profile.v1</code>:</p>
+  <ul>
+    <li>your chosen player name and avatar;</li>
+    <li>preferences: sound, haptics, live validation;</li>
+    <li>aggregate statistics: matches, wins, points, best score, best streak,
+    best chain, energy earned and spent, power-ups fired;</li>
+    <li>per-category best scores; and</li>
+    <li>your thirty most recent match results (score, place, category, mode).</li>
+  </ul>
+  <p>This data exists only on the device you played on. There is no server-side
+  profile, no sync, and no way for the operator of this site to read it. Clearing
+  your browser storage (or the "Reset progress" button in the profile screen)
+  deletes it permanently.</p>
+
+  <h2>2. What is never collected</h2>
+  <ul>
+    <li>No account, email address, phone number or payment details — the game
+    does not ask for any.</li>
+    <li>No analytics, telemetry, crash reporting or advertising SDKs are
+    bundled.</li>
+    <li>No third-party cookies. The game sets no cookies at all.</li>
+    <li>No location, contacts, camera, microphone or microphone-adjacent
+    permissions. The only optional device APIs used are vibration (haptics) and
+    screen wake-lock during a match, both of which you can switch off or which
+    fail silently if denied.</li>
+  </ul>
+
+  <h2>3. Multiplayer: what travels, and to whom</h2>
+  <p>When you create or join an online room, the game opens a
+  <strong>peer-to-peer</strong> connection (WebRTC) between the devices in that
+  room. The host device holds the match; every other device sends its moves to
+  the host and receives match states back.</p>
+  <p>What leaves your device in a room: your player name, and the moves you make
+  (words submitted, passes, power-ups). These go <em>only</em> to the other
+  devices in your room, over an encrypted WebRTC channel.</p>
+  <p>One exception: establishing the connection requires a brief handshake
+  through a public signalling server operated by the PeerJS project. That
+  handshake carries the room code and connection identifiers — not your words,
+  not your statistics, not your name. Game traffic never transits that server.</p>
+  <p>When the room closes, the match state is discarded by every device. Nothing
+  is retained by any server, because no server holds it.</p>
+
+  <h2>4. Offline caching</h2>
+  <p>The game installs a service worker so it opens instantly and works without a
+  connection. It caches the game's own files (code, styles, fonts, icons,
+  photography) in your browser's cache storage. That cache contains no personal
+  data and is removed when you uninstall the app or clear site data.</p>
+
+  <h2>5. Children</h2>
+  <p>The game is suitable for all ages and, because it collects nothing, imposes
+  no age gate. If you deploy a modified copy with accounts, analytics or chat,
+  you — not this project — become responsible for complying with children's
+  privacy law such as COPPA and the GDPR-K provisions.</p>
+
+  <h2>6. Your rights</h2>
+  <p>Because no personal data is processed by any server, there is no controller
+  holding records about you to exercise access, rectification or erasure rights
+  against. Your copy of your data is on your device and you can delete it at any
+  time. If you believe this statement is inaccurate for a deployment you are
+  using, contact that deployment's operator.</p>
+
+  <h2>7. If you run your own copy</h2>
+  <p>This page describes the unmodified game. If you add analytics, accounts,
+  payments or advertising to a fork, you must write your own privacy notice and
+  replace this page. Shipping a modified build with this page intact while
+  collecting data would misrepresent your product.</p>
+
+  <h2>8. Changes and contact</h2>
+  <p>This notice is versioned with the game (see the effective date above).
+  Questions or concerns:
+  <a href="https://github.com/Omprakash-prog03/Atlas-game/issues">open an issue in the project repository</a>.</p>
+
+  <div class="legal__card">
+    <h3>Data inventory</h3>
+    <table class="legal__table">
+      <tr><th>Player name, avatar, preferences</th><td>localStorage on your device</td><td>until you reset</td></tr>
+      <tr><th>Statistics &amp; last 30 matches</th><td>localStorage on your device</td><td>until you reset</td></tr>
+      <tr><th>Words and moves in an online room</th><td>other devices in your room, via WebRTC</td><td>discarded when the room closes</td></tr>
+      <tr><th>Room code &amp; connection ids</th><td>PeerJS signalling (handshake only)</td><td>transient</td></tr>
+      <tr><th>Game files</th><td>browser cache (service worker)</td><td>until you clear site data</td></tr>
+      <tr><th>Anything else</th><td>nothing</td><td>&mdash;</td></tr>
+    </table>
+  </div>
+
+  <footer class="legal__foot">
+    <span>&copy; 2026 Omprakash-prog03 &middot; ATLAS is released under the MIT licence.</span>
+    <span>
+      <a href="terms.html">Terms of use</a> &middot;
+      <a href="THIRD-PARTY-NOTICES.md">Third-party notices</a> &middot;
+      <a href="LICENSE">Licence text</a>
+    </span>
+  </footer>
+</main>
+</body>
+</html>

@@ -20,7 +20,8 @@
       haptics: true,
       liveValidation: true,
       onboarded: false,
-      stats: { matches: 0, wins: 0, points: 0, bestScore: 0, bestStreak: 0, words: 0 },
+      stats: { matches: 0, wins: 0, points: 0, bestScore: 0, bestStreak: 0, words: 0,
+               bestCombo: 0, energyEarned: 0, energySpent: 0, powers: 0, doublesCashed: 0, shieldsUsed: 0 },
       categories: {},
       history: []
     };
@@ -108,11 +109,20 @@
     data.stats.bestStreak = Math.max(data.stats.bestStreak, r.bestStreak || 0);
     data.stats.words += Math.max(0, r.words || 0);
 
-    var cat = data.categories[category] || { matches: 0, wins: 0, best: 0, points: 0 };
+    // v4 economy totals
+    data.stats.bestCombo = Math.max(data.stats.bestCombo || 0, r.bestCombo || 0);
+    data.stats.energyEarned = (data.stats.energyEarned || 0) + Math.max(0, r.energyEarned || 0);
+    data.stats.energySpent = (data.stats.energySpent || 0) + Math.max(0, r.energySpent || 0);
+    data.stats.powers = (data.stats.powers || 0) + Math.max(0, r.powers || 0);
+    data.stats.doublesCashed = (data.stats.doublesCashed || 0) + Math.max(0, r.doublesCashed || 0);
+    data.stats.shieldsUsed = (data.stats.shieldsUsed || 0) + Math.max(0, r.shieldsUsed || 0);
+
+    var cat = data.categories[category] || { matches: 0, wins: 0, best: 0, points: 0, bestCombo: 0 };
     cat.matches += 1;
     if (r.won) cat.wins += 1;
     cat.points += Math.max(0, r.score || 0);
     cat.best = Math.max(cat.best || 0, r.score || 0);
+    cat.bestCombo = Math.max(cat.bestCombo || 0, r.bestCombo || 0);
     data.categories[category] = cat;
 
     data.history.unshift({
@@ -123,7 +133,10 @@
       players: r.players || 1,
       words: r.words || 0,
       won: !!r.won,
-      mode: r.mode || "solo"
+      mode: r.mode || "solo",
+      bestCombo: r.bestCombo || 0,
+      powers: r.powers || 0,
+      difficulty: r.difficulty || null
     });
     data.history = data.history.slice(0, MAX_HISTORY);
 
